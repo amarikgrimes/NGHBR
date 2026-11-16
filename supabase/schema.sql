@@ -43,3 +43,8 @@ create table bookings (
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
+
+alter table profiles enable row level security;
+alter table taskers  enable row level security;
+alter table tasks    enable row level security;
+alter table bookings enable row level security;
