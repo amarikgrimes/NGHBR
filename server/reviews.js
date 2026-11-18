@@ -23,14 +23,14 @@ const { bookingId, rating, comment } = req.body;
   }
   console.log(`Received review submission for bookingId: ${bookingId}, rating: ${rating}, comment: ${comment}`);
 
-  //is the email a real user?: the email must be a user in the authentication system for an actual label to be output, otherwise it will return a null user id. The server will return a 401 instead of a 404 in order to avoid user enumeration attacks, and exposing internal information about the system and whether a user is authorized or not.
+//is the email a real user?: the email must be a user in the authentication system for an actual label to be output, otherwise it will return a null user id. The server will return a 401 instead of a 404 in order to avoid user enumeration attacks, and exposing internal information about the system and whether a user is authorized or not.
   try {
     const userId = await getUserIdByEmail(userEmail);
     if (!userId) {
       return res.status(401).json({ success: false, message: 'User authentication required' });
     }
     console.log(`User ID for email ${userEmail}: ${userId}`);
-  //does the booking exist?: check for the booking through a maybesingle supabase javascript call, first it will check for a general error which will return a 500 error code as to specify it is a server error that needs fixing, next if there is not general error but the booking itself is not found (row is null) then the server will return a 404 error code otherwise the booking will be returned to the server for further checks.
+//does the booking exist?: check for the booking through a maybesingle supabase javascript call, first it will check for a general error which will return a 500 error code as to specify it is a server error that needs fixing, next if there is not general error but the booking itself is not found (row is null) then the server will return a 404 error code otherwise the booking will be returned to the server for further checks.
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('*')
@@ -44,20 +44,25 @@ const { bookingId, rating, comment } = req.body;
         return res.status(404).json({ success: false, message: 'Booking not found' });
       }
     console.log(`Booking found: ${JSON.stringify(booking)}`);
+//is this the customers booking?: the booking.customer_id value must equal the id returned by the getUserIdByEmail function, otherwise the server will return a 403 error code because it knows who the user is but it can not give them access to a booking that is not theirs.
+    if (booking.customer_id !== userId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: You do not have access to this booking' });
+    }
+//has the booking been paid?: the booking must have a status of 'paid' in the supabase database, otherwise the server will return an error code of 409 becauase the booking has not been paid for yet and thus the customer can not leave a review for a booking for it.
+    if (booking.status !== 'paid') {
+      return res.status(409).json({ success: false, message: 'Conflict: Booking has not been paid for yet' });
+    }
+    return res.json({ success: true, message: 'okay from reviews.js' });
   }
   catch (error) {
       console.error('Review submit error:', error);
       return res.status(500).json({ success: false, message: 'Internal server error' });
-  return res.json({ success: true, message: 'okay from reviews.js' });
+  
   }
 };
 }
 module.exports = { createReviewHandler };
 
-
-//is this the customers booking?: the booking.customer_id value must equal the id returned by the getUserIdByEmail function, otherwise the server will return a 403 error code because it knows who the user is but it can not give them access to a booking that is not theirs.
-
-//has the booking been paid?: the booking must have a status of 'paid' in the supabase database, otherwise the server will return an error code of 409 becauase the booking has not been paid for yet and thus the customer can not leave a review for a booking for it.
 
 //save the review: if all of the above checks pass, then the server will save the review to the supabase database, the booking_id and tasker_id will come from the booking row fetched beforehand (tasker_id comes from the booking so that a customer may not request and review any tasker, only the one tasked to their booking), the customr_id comes from userlookup that happened earlier, the rating and comment come from the request body, and the created_at will be set to the current time by the supabase database.
 
