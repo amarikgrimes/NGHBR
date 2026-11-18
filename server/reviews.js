@@ -30,18 +30,30 @@ const { bookingId, rating, comment } = req.body;
       return res.status(401).json({ success: false, message: 'User authentication required' });
     }
     console.log(`User ID for email ${userEmail}: ${userId}`);
-  } catch (error) {
-      console.error('Error fetching user ID:', error);
-      return res.status(500).json({ success: false, message: 'Internal server error' });
+  //does the booking exist?: check for the booking through a maybesingle supabase javascript call, first it will check for a general error which will return a 500 error code as to specify it is a server error that needs fixing, next if there is not general error but the booking itself is not found (row is null) then the server will return a 404 error code otherwise the booking will be returned to the server for further checks.
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', bookingId)
+      .maybeSingle();
+
+      if (bookingError) {
+        throw bookingError; // This will be caught by the catch block below
+      }
+      if (booking === null ) {
+        return res.status(404).json({ success: false, message: 'Booking not found' });
+      }
+    console.log(`Booking found: ${JSON.stringify(booking)}`);
   }
+  catch (error) {
+      console.error('Review submit error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
   return res.json({ success: true, message: 'okay from reviews.js' });
+  }
 };
 }
 module.exports = { createReviewHandler };
 
-
-
-//does the booking exist?: check for the booking through a maybesingle supabase javascript call, first it will check for a general error which will return a 500 error code as to specify it is a server error that needs fixing, next if there is not general error but the booking itself is not found (row is null) then the server will return a 404 error code otherwise the booking will be returned to the server for further checks.
 
 //is this the customers booking?: the booking.customer_id value must equal the id returned by the getUserIdByEmail function, otherwise the server will return a 403 error code because it knows who the user is but it can not give them access to a booking that is not theirs.
 
