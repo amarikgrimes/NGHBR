@@ -8,9 +8,13 @@ to have a full proof way of preventing duplicates there will be sql schema that 
 
 ## Known Limits
  - Users may review before task is completed, once a completed status is fully fledged out I believe using that as the prompt for a review will be best
- - 
 
 ## Ranking: Tasker with one 5-star review vs a tasker with fourty reviews at 4.6 stars 
 
 
 ## Where AI was used
+
+I used Claude throughout this assignment. Specifically:
+
+- **SQL:** Claude wrote the first drafts of `schema.sql` and `reviews.sql`. I had been rusty on my sql skills and my beginning thought process needed more work and better retraints for my project. Helped with RLS security as well.
+- **Endpoint design:** Claude assisted me in thinking through security measures/error codes that would assist my process of creating endpoints for review submission. Suggested I start a plain-English outline of every check. Claude reviewed my outline and asked questions, and I revised it until I could explain each rule on my own accurately. Assisted in endpoint review and error debugging.

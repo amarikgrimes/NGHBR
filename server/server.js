@@ -7,6 +7,9 @@ const multer = require('multer');
 const axios = require('axios');
 const crypto = require('crypto');
 const cors = require('cors');
+//new import for the review handler function
+const { createReviewHandler } = require('./reviews.js');
+
 
 // Initialize Supabase client
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -147,6 +150,10 @@ async function getAuthenticatedUser(req, res) {
 
   return data.user;
 }
+// call the review handler function and pass in the supabase client and getUserIdByEmail function as dependencies. 
+const reviewHandler = createReviewHandler({ supabase, getUserIdByEmail });
+// register the review handler route
+app.post ('/api/reviews', reviewHandler);
 
 // ========================================================
 // Authentication Routes using Supabase Auth
