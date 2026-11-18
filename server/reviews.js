@@ -22,12 +22,24 @@ const { bookingId, rating, comment } = req.body;
     return res.status(400).json({ success: false, message: 'Invalid input data' });
   }
   console.log(`Received review submission for bookingId: ${bookingId}, rating: ${rating}, comment: ${comment}`);
-  res.json({ success: true, message: 'okay from reviews.js' });
-    };
+
+  //is the email a real user?: the email must be a user in the authentication system for an actual label to be output, otherwise it will return a null user id. The server will return a 401 instead of a 404 in order to avoid user enumeration attacks, and exposing internal information about the system and whether a user is authorized or not.
+  try {
+    const userId = await getUserIdByEmail(userEmail);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User authentication required' });
+    }
+    console.log(`User ID for email ${userEmail}: ${userId}`);
+  } catch (error) {
+      console.error('Error fetching user ID:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+  return res.json({ success: true, message: 'okay from reviews.js' });
+};
 }
 module.exports = { createReviewHandler };
 
-//is the email a real user?: the email must be a user in the authentication system for an actual label to be output, otherwise it will return a null user id. The server will return a 401 instead of a 404 in order to avoid user enumeration attacks, and exposing internal information about the system and whether a user is authorized or not.
+
 
 //does the booking exist?: check for the booking through a maybesingle supabase javascript call, first it will check for a general error which will return a 500 error code as to specify it is a server error that needs fixing, next if there is not general error but the booking itself is not found (row is null) then the server will return a 404 error code otherwise the booking will be returned to the server for further checks.
 
