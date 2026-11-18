@@ -33,12 +33,12 @@ const { bookingId, rating, comment } = req.body;
 //does the booking exist?: check for the booking through a maybesingle supabase javascript call, first it will check for a general error which will return a 500 error code as to specify it is a server error that needs fixing, next if there is not general error but the booking itself is not found (row is null) then the server will return a 404 error code otherwise the booking will be returned to the server for further checks.
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('*')
+      .select('id, customer_id, tasker_id, status')
       .eq('id', bookingId)
       .maybeSingle();
 
       if (bookingError) {
-        throw bookingError; // This will be caught by the catch block below
+        throw bookingError; // this will be caught by the catch block below
       }
       if (booking === null ) {
         return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -52,22 +52,32 @@ const { bookingId, rating, comment } = req.body;
     if (booking.status !== 'paid') {
       return res.status(409).json({ success: false, message: 'Conflict: Booking has not been paid for yet' });
     }
-    return res.json({ success: true, message: 'okay from reviews.js' });
+//save the review: if all of the above checks pass, then the server will save the review to the supabase database, the booking_id and tasker_id will come from the booking row fetched beforehand (tasker_id comes from the booking so that a customer may not request and review any tasker, only the one tasked to their booking), the customr_id comes from userlookup that happened earlier, the rating and comment come from the request body, and the created_at will be set to the current time by the supabase database.
+
+    const { error : insertError } = await supabase.from('reviews').insert({
+        booking_id: bookingId,
+        tasker_id: booking.tasker_id,
+        customer_id: userId,
+        rating,
+        comment,
+      });
+//duplicate reviews: the code will insert directly and let the unique constraint refuse a second one, if the customer has already left a review for this booking, i.e posgres returns an error code of 23505, then the server will return a error code of 409 because the customers request conflicts with the existing review.
+
+      if (insertError) {
+        if (insertError.code === '23505') { // Unique violation error code in PostgreSQL
+          return res.status(409).json({ success: false, message: 'Conflict: Review already exists for this booking' });
+        } else {
+          throw insertError; // this will be caught by the catch block below
+        }
   }
+//when successful, the server will return a 201 status code and state that the review was successfully created.
+    return res.status(201).json({ success: true, message: 'Review successfully created' });
+}
+//something else: if any other error occurs, the server will return a 500 error code because it is an internal server error and the server does not know what went wrong or can not specify to the user because the risk of exposing internal infomration so the raw error code would print to the console instead . 
   catch (error) {
       console.error('Review submit error:', error);
       return res.status(500).json({ success: false, message: 'Internal server error' });
-  
   }
 };
 }
 module.exports = { createReviewHandler };
-
-
-//save the review: if all of the above checks pass, then the server will save the review to the supabase database, the booking_id and tasker_id will come from the booking row fetched beforehand (tasker_id comes from the booking so that a customer may not request and review any tasker, only the one tasked to their booking), the customr_id comes from userlookup that happened earlier, the rating and comment come from the request body, and the created_at will be set to the current time by the supabase database.
-
-//duplicate reviews: the code will insert directly and let the unique constraint refuse a second one, if the customer has already left a review for this booking, i.e posgres returns an error code of 23505, then the server will return a error code of 409 because the customers request conflicts with the existing review.
-
-//something else: if any other error occurs, the server will return a 500 error code because it is an internal server error and the server does not know what went wrong or can not specify to the user because the risk of exposing internal infomration so the raw error code would print to the console instead . 
-
-//when successful, the server will return a 201 status code and state that the review was successfully created.
