@@ -64,6 +64,8 @@ async function callHandler({
   return { res, supabase };
 }
 
+// actual tests (11 cases)
+
 test('saves a review for a paid booking and returns 201', async () => {
   const { res, supabase } = await callHandler({ booking: paidBooking });
   assert.equal(res.statusCode, 201);
